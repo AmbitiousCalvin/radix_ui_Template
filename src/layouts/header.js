@@ -20,7 +20,7 @@ export const Header = memo(() => {
   const { darkMode, setDarkMode } = useLayoutContext();
 
   return (
-    <Section p="2" className="border-red" width="100%">
+    <Section p="3" className="header " width="100%">
       <Flex gap="3">
         <IconButton variant="solid">
           <MenuIcon />
@@ -31,7 +31,7 @@ export const Header = memo(() => {
           <Heading>GoDash</Heading>
         </Flex>
 
-        <Section p="2" style={{ flex: 1 }} className="border-red"></Section>
+        <Section p="2" style={{ flex: 1 }} className=""></Section>
 
         <TextField.Root placeholder="Search the docs…">
           <TextField.Slot>

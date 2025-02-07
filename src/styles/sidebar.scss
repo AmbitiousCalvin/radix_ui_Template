@@ -1,0 +1,16 @@
+@import "variables";
+
+.sidebar {
+  position: sticky;
+  top: 55px;
+  min-height: calc(100vh - 55px);
+}
+
+.sidebar__section-container {
+  transition: all 0.2s;
+  border-radius: 5px;
+
+  &:hover {
+    background-color: $green-5;
+  }
+}
