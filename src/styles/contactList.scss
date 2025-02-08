@@ -2,14 +2,16 @@
 @import "../styles/variables";
 
 .contact-list {
-	position: sticky;
-	top: 65px;
+  min-width: 225px;
+  height: calc(100vh - 65px);
+  position: sticky;
+  top: 65px;
 }
 
 .contact-list__item {
   position: relative;
-  padding-block: 1.5rem;
-  justify-content: start;
+  padding-block: 1.5rem !important;
+  justify-content: start !important;
 
   &__content {
     text-align: left;

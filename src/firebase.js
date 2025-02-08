@@ -20,6 +20,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 export const auth = getAuth(app);
 export const usersRef = collection(db, "users");
+export const messagesRef = collection(db, "messages");
 
 export const signInWithGoogle = async () => {
   try {

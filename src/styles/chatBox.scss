@@ -1,0 +1,23 @@
+@import "./variables";
+
+.chat {
+  width: 100%;
+  height: calc(100vh - 65px);
+  border: 1px solid red;
+  position: relative;
+}
+
+.chat-footer {
+  width: 100%;
+  position: absolute;
+  bottom: 0px;
+  border: 1px solid red;
+  padding: 1rem;
+  background-color: $gray-1;
+}
+
+.send-msg-container {
+  &__input {
+    width: 100%;
+  }
+}

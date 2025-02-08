@@ -1,7 +1,9 @@
 import { onSnapshot } from "firebase/firestore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function useSnapshot(query, setState) {
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const unsubscribe = onSnapshot(query, (snapshot) => {
       const users = snapshot.docs.map((doc) => {
@@ -11,8 +13,11 @@ export function useSnapshot(query, setState) {
       });
 
       setState(users);
+      setLoading(false)
     });
 
     return () => unsubscribe();
   }, [query]);
+
+  return { loading }
 }
