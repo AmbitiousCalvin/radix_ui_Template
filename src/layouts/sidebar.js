@@ -16,10 +16,10 @@ import useLocalstorage from "../hooks/useLocalstorage";
 import { useLayoutContext } from "../contexts/LayoutContext";
 import "../styles/sidebar.scss";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
-import ChatIcon from "@mui/icons-material/Chat";
-import PeopleIcon from "@mui/icons-material/People";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+import GroupIcon from "@mui/icons-material/Group";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import SettingsIcon from "@mui/icons-material/Settings";
-import DescriptionIcon from "@mui/icons-material/Description";
 
 const navigation = [
   {
@@ -29,12 +29,17 @@ const navigation = [
   {
     segment: "direct-messages",
     title: "Direct Messages",
-    icon: <ChatIcon />,
+    shortTitle: "DMs",
+    icon: <ChatBubbleOutlineIcon />,
   },
   {
     segment: "group-chats",
     title: "Group Chats",
-    icon: <PeopleIcon />,
+    shortTitle: "Groups",
+    icon: <GroupIcon />,
+  },
+  {
+    separator: "true",
   },
   {
     kind: "header",
@@ -43,11 +48,13 @@ const navigation = [
   {
     segment: "profile",
     title: "Profile",
-    icon: <DescriptionIcon />,
+    shortTitle: "Profile",
+    icon: <AccountCircleIcon />,
   },
   {
     segment: "preferences",
     title: "Preferences",
+    shortTitle: "Settings",
     icon: <SettingsIcon />,
   },
 ];
@@ -55,26 +62,34 @@ const navigation = [
 export const Sidebar = memo(() => {
   const { isSidebarOpen } = useLayoutContext();
 
+  const className = isSidebarOpen
+    ? "sidebar sidebar__open"
+    : "sidebar sidebar__closed";
+
   return (
-    <Box
-      maxWidth="250px"
-      className="sidebar"
-      display={isSidebarOpen ? "initial" : "none"}
-    >
+    <Box className={className}>
       <Grid p="2" gap="1">
         {navigation.map((section) => {
           if (section.hasOwnProperty("kind")) {
             return (
-              <Text color="gray" size="2">
+              <Text color="gray" size="1" mb="1">
                 {section.title}
               </Text>
             );
+          } else if (section.hasOwnProperty("separator")) {
+            return (
+              <Separator my="1" mt="2" size="4" orientation="horizontal" />
+            );
           } else {
             return (
-              <Button variant="outline" className="sidebar_section-item">
-                {section.icon}
-                <Text size="2">{section.title}</Text>
-              </Button>
+              <>
+                <Button variant="outline" className="sidebar__section-item">
+                  {section.icon}
+                  <Text className="sidebar__section-item__text" size="2">
+                    {section.title}
+                  </Text>
+                </Button>
+              </>
             );
           }
         })}

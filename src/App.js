@@ -13,7 +13,7 @@ export default function App() {
     <Theme
       scaling="110%"
       appearance={darkMode ? "dark" : "light"}
-      accentColor="green"
+      accentColor="cyan"
       grayColor="sand"
       radius="medium"
     >

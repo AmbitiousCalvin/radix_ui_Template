@@ -5,9 +5,29 @@
   top: 65px;
   min-height: calc(100vh - 65px);
   border-right: 1px solid $gray-6;
-}
 
-.sidebar_section-item {
-  display: flex;
-  justify-content: flex-start;
+  &__closed {
+    .sidebar__section-item {
+      justify-content: center !important;
+    }
+
+    .sidebar__section-item__text {
+      display: none;
+    }
+
+    .sidebar__section-item__text-short {
+      text-align: center;
+    }
+  }
+
+  &__section-item {
+    padding-block: 1.5rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start !important;
+
+    &__text {
+      white-space: nowrap;
+    }
+  }
 }
