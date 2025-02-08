@@ -1,3 +1,5 @@
+@import "./styles/variables";
+
 * {
   box-sizing: border-box;
   font-family: "Roboto", Arial, sans-serif;
@@ -29,10 +31,15 @@ body {
 }
 
 // GENERIC STYLES
-.App {
-  // min-height: 300vh;
+.header,
+.sidebar,
+.main-content__section {
+  background-color: $gray-1;
 }
 
 .main-content__section {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
   min-height: 300vh;
 }

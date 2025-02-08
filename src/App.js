@@ -19,8 +19,11 @@ export default function App() {
     >
       <div className="App">
         <Header></Header>
-        <Section pt="0" className="main-content__section">
-          <Sidebar></Sidebar>
+        <Section p="0" className="main-content__section">
+          <div>
+            <Sidebar></Sidebar>
+          </div>
+          <h1>Hello</h1>
         </Section>
       </div>
     </Theme>

@@ -2,15 +2,12 @@
 
 .sidebar {
   position: sticky;
-  top: 55px;
-  min-height: calc(100vh - 55px);
+  top: 65px;
+  min-height: calc(100vh - 65px);
+  border-right: 1px solid $gray-6;
 }
 
-.sidebar__section-container {
-  transition: all 0.2s;
-  border-radius: 5px;
-
-  &:hover {
-    background-color: $green-5;
-  }
+.sidebar_section-item {
+  display: flex;
+  justify-content: flex-start;
 }
