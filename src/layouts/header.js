@@ -16,6 +16,10 @@ import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import useLocalstorage from "../hooks/useLocalstorage";
 import "../styles/header.scss";
 import { useLayoutContext } from "../contexts/LayoutContext";
+import { auth } from "../firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { signInWithGoogle, usersRef } from "../firebase";
+import { query, where, getDocs, addDoc } from "firebase/firestore";
 
 export const Header = memo(() => {
   return (
@@ -39,7 +43,7 @@ export const Header = memo(() => {
           </TextField.Slot>
         </TextField.Root>
 
-        <Button>Sign in</Button>
+        <SignInButton />
         <ThemeButton />
       </Flex>
     </Section>
@@ -66,4 +70,33 @@ const ThemeButton = () => {
       {!darkMode && <NightlightIcon />}
     </IconButton>
   );
+};
+
+const SignInButton = () => {
+  const [user] = useAuthState(auth);
+
+  const addUserIfNotExists = async ({ userId, userData }) => {
+    const q = query(usersRef, where("uid", "==", userId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      console.log("no user ike this one");
+      await addDoc(usersRef, { uid: userId, ...userData });
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      addUserIfNotExists({
+        userId: user.uid,
+        userData: {
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          email: user.email,
+        },
+      });
+    }
+  }, [user]);
+
+  return <Button onClick={signInWithGoogle}>Sign in</Button>;
 };

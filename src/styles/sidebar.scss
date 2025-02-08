@@ -1,23 +1,17 @@
 @import "variables";
 
 .sidebar {
-  position: sticky;
+  position: fixed;
   top: 65px;
   min-height: calc(100vh - 65px);
   border-right: 1px solid $gray-6;
+  background-color: $gray-1;
+  transition: transform 0.5s;
+  z-index: 1000;
 
   &__closed {
-    .sidebar__section-item {
-      justify-content: center !important;
-    }
-
-    .sidebar__section-item__text {
-      display: none;
-    }
-
-    .sidebar__section-item__text-short {
-      text-align: center;
-    }
+    visibility: hidden;
+    transform: translateX(-100%);
   }
 
   &__section-item {
@@ -30,4 +24,8 @@
       white-space: nowrap;
     }
   }
+}
+
+body:has(.sidebar__open) .overlay {
+  opacity: 1;
 }

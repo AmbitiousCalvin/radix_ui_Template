@@ -1,0 +1,17 @@
+@import "../styles";
+@import "../styles/variables";
+
+.contact-list {
+	position: sticky;
+	top: 65px;
+}
+
+.contact-list__item {
+  position: relative;
+  padding-block: 1.5rem;
+  justify-content: start;
+
+  &__content {
+    text-align: left;
+  }
+}

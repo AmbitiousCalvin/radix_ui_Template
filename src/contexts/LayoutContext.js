@@ -10,7 +10,7 @@ export const useLayoutContext = () => {
 
 export const LayoutContextProvider = (props) => {
   const [darkMode, setDarkMode] = useLocalStorage("dark-mode", true);
-  const [isSidebarOpen, toggleSidebar] = useToggle(true);
+  const [isSidebarOpen, toggleSidebar] = useToggle(false);
 
   return (
     <layoutContext.Provider

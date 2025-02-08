@@ -10,6 +10,7 @@ import {
   Text,
   Grid,
   Separator,
+  Theme,
 } from "@radix-ui/themes";
 import { useState, useRef, useEffect, memo } from "react";
 import useLocalstorage from "../hooks/useLocalstorage";
@@ -67,33 +68,43 @@ export const Sidebar = memo(() => {
     : "sidebar sidebar__closed";
 
   return (
-    <Box className={className}>
-      <Grid p="2" gap="1">
-        {navigation.map((section) => {
-          if (section.hasOwnProperty("kind")) {
-            return (
-              <Text color="gray" size="1" mb="1">
-                {section.title}
-              </Text>
-            );
-          } else if (section.hasOwnProperty("separator")) {
-            return (
-              <Separator my="1" mt="2" size="4" orientation="horizontal" />
-            );
-          } else {
-            return (
-              <>
-                <Button variant="outline" className="sidebar__section-item">
+    <Theme accentColor="green">
+      <Box className={className}>
+        <Grid p="2" gap="1">
+          {navigation.map((section, index) => {
+            if (section.hasOwnProperty("kind")) {
+              return (
+                <Text key={index} color="gray" size="1" mb="1">
+                  {section.title}
+                </Text>
+              );
+            } else if (section.hasOwnProperty("separator")) {
+              return (
+                <Separator
+                  key={index}
+                  my="1"
+                  mt="2"
+                  size="4"
+                  orientation="horizontal"
+                />
+              );
+            } else {
+              return (
+                <Button
+                  key={index}
+                  variant="soft"
+                  className="sidebar__section-item"
+                >
                   {section.icon}
                   <Text className="sidebar__section-item__text" size="2">
                     {section.title}
                   </Text>
                 </Button>
-              </>
-            );
-          }
-        })}
-      </Grid>
-    </Box>
+              );
+            }
+          })}
+        </Grid>
+      </Box>
+    </Theme>
   );
 });
