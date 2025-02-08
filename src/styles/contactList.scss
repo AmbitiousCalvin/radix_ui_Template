@@ -6,6 +6,7 @@
   height: calc(100vh - 65px);
   position: sticky;
   top: 65px;
+  border-right: 1px solid $gray-7;
 }
 
 .contact-list__item {
@@ -16,4 +17,21 @@
   &__content {
     text-align: left;
   }
+
+  &__icon {
+    margin-left: auto;
+  }
+
+  &-text,
+  &-last-message {
+    width: 100px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+}
+
+.contact-list__btn {
+  display: flex;
+  justify-content: flex-start !important;
 }

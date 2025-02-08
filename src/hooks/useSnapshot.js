@@ -13,11 +13,11 @@ export function useSnapshot(query, setState) {
       });
 
       setState(users);
-      setLoading(false)
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [query]);
 
-  return { loading }
+  return { loading };
 }

@@ -3,7 +3,6 @@
 .chat {
   width: 100%;
   height: calc(100vh - 65px);
-  border: 1px solid red;
   position: relative;
 }
 
@@ -11,9 +10,9 @@
   width: 100%;
   position: absolute;
   bottom: 0px;
-  border: 1px solid red;
   padding: 1rem;
   background-color: $gray-1;
+  border-top: 1px solid $gray-4;
 }
 
 .send-msg-container {
