@@ -11,6 +11,9 @@ export const useLayoutContext = () => {
 export const LayoutContextProvider = (props) => {
   const [darkMode, setDarkMode] = useLocalStorage("dark-mode", true);
   const [isSidebarOpen, toggleSidebar] = useToggle(false);
+  const [chatId, setChatId] = useState("");
+  const [otherUserDocId, setOtherUserDocId] = useState("");
+  const [otherUserChatId, setOtherUserChatId] = useState("");
 
   return (
     <layoutContext.Provider
@@ -19,6 +22,12 @@ export const LayoutContextProvider = (props) => {
         setDarkMode,
         isSidebarOpen,
         toggleSidebar,
+        chatId,
+        setChatId,
+        otherUserDocId,
+        otherUserChatId,
+        setOtherUserDocId,
+        setOtherUserChatId,
       }}
     >
       {props.children}

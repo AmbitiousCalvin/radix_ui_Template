@@ -1,6 +1,7 @@
 @import "variables";
 
 .sidebar {
+  min-width: 225px;
   position: fixed;
   top: 65px;
   min-height: calc(100vh - 65px);

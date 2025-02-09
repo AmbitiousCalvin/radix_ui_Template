@@ -20,15 +20,22 @@ import { useState, useEffect, memo, useRef } from "react";
 import { auth, messagesRef, logOut, usersRef } from "../firebase";
 import SendIcon from "@mui/icons-material/Send";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import { useLayoutContext } from "../contexts/LayoutContext";
 
 import {
+  where,
   query,
   orderBy,
   limit,
   onSnapshot,
   addDoc,
   serverTimestamp,
+  doc,
+  getDocs,
+  updateDoc,
+  arrayUnion,
 } from "firebase/firestore";
+import { db } from "../firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 
 export function ChatBox() {
@@ -106,32 +113,96 @@ export function ChatBox() {
           ))}
         </div>
         <span ref={scrollRef}></span>
-        <div className="chat-footer">
-          <Flex gap="2" className="send-msg-container">
-            <TextField.Root
-              size="3"
-              className="send-msg-container__input"
-              placeholder="Search the docs…"
-            >
-              <TextField.Slot>
-                <IconButton size="1" variant="ghost">
-                  <AttachFileIcon fontSize="small" />
-                </IconButton>
-              </TextField.Slot>
-              <TextField.Slot>
-                <IconButton size="1" variant="ghost" radius="full">
-                  {" "}
-                  <SendIcon fontSize="small" />
-                </IconButton>
-              </TextField.Slot>
-            </TextField.Root>
-
-            <Button size="3" className="send-msg-container__btn">
-              Send
-            </Button>
-          </Flex>
-        </div>
+        <ChatFooter />
       </div>
     </>
   );
 }
+
+const ChatFooter = () => {
+  const [user] = useAuthState(auth);
+  const [input, setInput] = useState("");
+  const { chatId, otherUserDocId, otherUserChatId } = useLayoutContext();
+
+  const getUserDocId = async (user) => {
+    const userQuery = query(usersRef, where("uid", "==", user.uid));
+
+    try {
+      const querySnapshot = await getDocs(userQuery);
+      if (querySnapshot.empty) return console.error("User document not found!");
+
+      const userDoc = querySnapshot.docs[0]; // Get the first matching document
+      return userDoc.id; // Return the document ID
+    } catch (error) {
+      console.error("Error fetching user document:", error);
+    }
+  };
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    const userDocId = await getUserDocId(user);
+    if (!userDocId) return;
+    if (!chatId) return console.error("chatId is undefined");
+
+    const userRef = doc(db, "users", userDocId, "contacts", chatId);
+    const OtherUserRef = doc(
+      db,
+      "users",
+      otherUserDocId,
+      "contacts",
+      otherUserChatId
+    );
+
+    const messageText = input;
+    setInput("");
+
+    const newMessage = {
+      sender: user.uid,
+      text: messageText,
+      timestamp: new Date(),
+    };
+
+    try {
+      await updateDoc(userRef, {
+        messages: arrayUnion(newMessage),
+      });
+      await updateDoc(OtherUserRef, {
+        messages: arrayUnion(newMessage),
+      });
+      console.log("Message sent!");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  return (
+    <div className="chat-footer">
+      <Flex gap="2" className="send-msg-container">
+        <form onSubmit={sendMessage}>
+          <TextField.Root
+            onInput={(e) => setInput(e.target.value)}
+            size="3"
+            className="send-msg-container__input"
+            placeholder="Search the docs…"
+          >
+            <TextField.Slot>
+              <IconButton size="1" variant="ghost">
+                <AttachFileIcon fontSize="small" />
+              </IconButton>
+            </TextField.Slot>
+            <TextField.Slot>
+              <IconButton size="1" variant="ghost" radius="full">
+                {" "}
+                <SendIcon fontSize="small" />
+              </IconButton>
+            </TextField.Slot>
+          </TextField.Root>
+
+          <Button size="3" className="send-msg-container__btn">
+            Send
+          </Button>
+        </form>
+      </Flex>
+    </div>
+  );
+};

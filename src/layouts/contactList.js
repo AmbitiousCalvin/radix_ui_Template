@@ -19,10 +19,9 @@ import {
 } from "@radix-ui/themes";
 import { useState, useRef, useEffect, memo } from "react";
 import useLocalstorage from "../hooks/useLocalstorage";
-import { useLayoutContext } from "../contexts/LayoutContext";
 import "../styles/contactList.scss";
 import { useSnapshot } from "../hooks/useSnapshot";
-import { usersRef, auth } from "../firebase";
+import { usersRef, auth, db } from "../firebase";
 import PersonIcon from "@mui/icons-material/Person"; // View Profile Icon
 import ChatIcon from "@mui/icons-material/Chat"; // Start Chat Icon
 import NotificationsOffIcon from "@mui/icons-material/NotificationsOff"; // Mute Notifications Icon
@@ -30,7 +29,8 @@ import BlockIcon from "@mui/icons-material/Block"; // Block User Icon
 import DeleteIcon from "@mui/icons-material/Delete"; // Delete Chat Icon
 import MoreVertIcon from "@mui/icons-material/MoreVert"; // Three-dots Menu Icon
 import SettingsIcon from "@mui/icons-material/Settings"; // Settings Icon
-
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { useLayoutContext } from "../contexts/LayoutContext";
 import { useAuthState } from "react-firebase-hooks/auth";
 
 const dummyData = [{}, {}, {}, {}, {}];
@@ -45,12 +45,14 @@ export const ContactList = memo(() => {
     console.log("contacts log: ", contacts);
   }, [contacts]);
 
+  if (!user) return <h1>Loading...</h1>;
+
   return (
     <Theme accentColor="gray">
       <Box p="2" pl="0" className={"contact-list"}>
         <Grid gap="1">
           {contacts.map((contact) => {
-            // if (user.uid === contact.uid) return null;
+            if (user.uid === contact.uid) return null;
             return (
               <ContactListItem
                 key={contact.uid}
@@ -92,6 +94,79 @@ const ContactListItem = memo(({ contact = {}, isLoading }) => {
 });
 
 const MoreInfoIcon = ({ contact }) => {
+  const [user] = useAuthState(auth);
+  const { setChatId, setOtherUserDocId, setOtherUserChatId } =
+    useLayoutContext();
+
+  const getUserDocId = async (user) => {
+    // Query the "users" collection to find the document where "uid" matches
+    const userQuery = query(usersRef, where("uid", "==", user.uid));
+
+    try {
+      const querySnapshot = await getDocs(userQuery);
+      if (querySnapshot.empty) return console.error("User document not found!");
+
+      const userDoc = querySnapshot.docs[0]; // Get the first matching document
+      return userDoc.id; // Return the document ID
+    } catch (error) {
+      console.error("Error fetching user document:", error);
+    }
+  };
+
+  const startChat = async (contact) => {
+    const userDocId = await getUserDocId(user); // Get the document ID of the user
+    if (!userDocId) return;
+    const contactsRef = collection(db, "users", userDocId, "contacts");
+    const contactQuery = query(contactsRef, where("uid", "==", contact.uid));
+
+    const otherUserDocId = await getUserDocId(contact);
+    setOtherUserDocId(otherUserDocId);
+    const otherUserContactsRef = collection(
+      db,
+      "users",
+      otherUserDocId,
+      "contacts"
+    );
+    const otherUserContactQuery = query(
+      otherUserContactsRef,
+      where("uid", "==", user.uid)
+    );
+
+    try {
+      const querySnapshot = await getDocs(contactQuery);
+      const OtherUserQuerySnapshot = await getDocs(otherUserContactQuery);
+      if (querySnapshot.empty && OtherUserQuerySnapshot.empty) {
+        const docRef = await addDoc(contactsRef, {
+          displayName: contact.displayName,
+          photoURL: contact.photoURL,
+          email: contact.email,
+          uid: contact.uid,
+          messages: [],
+        });
+        setChatId(docRef.id);
+        console.log("Current User Contact added with ID:", docRef.id);
+
+        const otherUserDocRef = await addDoc(otherUserContactsRef, {
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          email: user.email,
+          uid: user.uid,
+          messages: [],
+        });
+        setOtherUserChatId(otherUserDocRef.id);
+
+        console.log(
+          "Contact added to the other user's contacts WITH ID",
+          otherUserDocRef.id
+        );
+      } else {
+        console.log("Contact already exists:", contact.uid);
+      }
+    } catch (error) {
+      console.error("Error adding contact:", error);
+    }
+  };
+
   return (
     <Popover.Root>
       <Popover.Trigger>
@@ -123,7 +198,7 @@ const MoreInfoIcon = ({ contact }) => {
             onClick={() => startChat(contact)}
           >
             <ChatIcon fontSize="small" />
-            Start Chat
+            Start Chat (Add Contact Fn)
           </Button>
 
           {/* Mute Notifications */}
@@ -131,7 +206,6 @@ const MoreInfoIcon = ({ contact }) => {
             className="contact-list__btn	"
             variant="soft"
             size="2"
-            className="contact-list__btn	"
             onClick={() => toggleMute(contact)}
           >
             <NotificationsOffIcon fontSize="small" />
