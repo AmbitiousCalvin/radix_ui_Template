@@ -109,7 +109,12 @@ const MoreInfoIcon = ({ contact }) => {
   const startChat = async (contact) => {
     try {
       setContact(contact);
-      const chatId = `${user.uid}_${contact.uid}`;
+      const generateChatId = (user1, user2) => {
+        return [String(user1).toLowerCase(), String(user2).toLowerCase()]
+          .sort((a, b) => a.localeCompare(b)) // Ensures proper sorting
+          .join("_");
+      };
+      const chatId = generateChatId(user.uid, contact.uid);
       const chatRef = doc(chatsRef, chatId);
       const chatSnapshot = await getDoc(chatRef);
 
