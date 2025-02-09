@@ -1,39 +1,62 @@
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
 import {
   getAuth,
+  GoogleAuthProvider,
   signInWithPopup,
   signOut,
-  GoogleAuthProvider,
 } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAh3VIYEbQND0YNtgxjERteK5rhO1B4Usc",
-  authDomain: "radix-3021b.firebaseapp.com",
-  projectId: "radix-3021b",
-  storageBucket: "radix-3021b.firebasestorage.app",
-  messagingSenderId: "589202483059",
-  appId: "1:589202483059:web:670945dc59c19502fa4706",
+  apiKey: "AIzaSyDZ5pm6UKkZ4nwzTf9fdxp8LKIi1VC7ti0",
+  authDomain: "fir-chat-1ef4f.firebaseapp.com",
+  projectId: "fir-chat-1ef4f",
+  storageBucket: "fir-chat-1ef4f.firebasestorage.app",
+  messagingSenderId: "119990007107",
+  appId: "1:119990007107:web:cc019cd5b3ddee77edabf6",
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const usersRef = collection(db, "users");
-export const messagesRef = collection(db, "messages");
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+const colRef = collection(db, "messages");
 
 export const signInWithGoogle = async () => {
   try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
-  } catch (error) {
-    console.log(error);
+    const result = await signInWithPopup(auth, provider);
+    console.log(result.user);
+  } catch (err) {
+    console.log(err);
   }
 };
 
 export const logOut = async () => {
   try {
     await signOut(auth);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.log(err);
   }
+};
+
+export {
+  colRef,
+  db,
+  auth,
+  provider,
+  signInWithPopup,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
 };
