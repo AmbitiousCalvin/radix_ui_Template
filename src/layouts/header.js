@@ -6,20 +6,19 @@ import {
   Heading,
   TextField,
 } from "@radix-ui/themes";
-import { useState, useRef, useEffect, memo } from "react";
+import { useEffect, memo } from "react";
 import MenuIcon from "@mui/icons-material/Menu";
 import DynamicFormIcon from "@mui/icons-material/DynamicForm";
 import NightlightIcon from "@mui/icons-material/Nightlight";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import SearchIcon from "@mui/icons-material/Search";
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
-import useLocalstorage from "../hooks/useLocalstorage";
 import "../styles/header.scss";
 import { useLayoutContext } from "../contexts/LayoutContext";
 import { auth } from "../firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { signInWithGoogle, usersRef } from "../firebase";
-import { query, where, getDocs, addDoc } from "firebase/firestore";
+import { getDoc, setDoc, doc } from "firebase/firestore";
 
 export const Header = memo(() => {
   return (
@@ -76,12 +75,12 @@ const SignInButton = () => {
   const [user] = useAuthState(auth);
 
   const addUserIfNotExists = async ({ userId, userData }) => {
-    const q = query(usersRef, where("uid", "==", userId));
-    const querySnapshot = await getDocs(q);
+    const userRef = doc(usersRef, userId);
+    const userSnapshot = await getDoc(userRef);
 
-    if (querySnapshot.empty) {
-      console.log("no user ike this one");
-      await addDoc(usersRef, { uid: userId, ...userData });
+    if (!userSnapshot.exists()) {
+      await setDoc(userRef, { uid: userId, ...userData });
+      console.log("User added with custom ID:", userId);
     }
   };
 

@@ -17,59 +17,39 @@ import {
   Skeleton,
 } from "@radix-ui/themes";
 import { useState, useEffect, memo, useRef } from "react";
-import { auth, messagesRef, logOut, usersRef } from "../firebase";
+import { auth, logOut, usersRef, db, chatsRef } from "../firebase";
 import SendIcon from "@mui/icons-material/Send";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import { useLayoutContext } from "../contexts/LayoutContext";
 
 import {
+  getDoc,
+  where,
   query,
+  collection,
   orderBy,
   limit,
   onSnapshot,
   addDoc,
   serverTimestamp,
+  doc,
+  setDoc,
+  getDocs,
+  updateDoc,
+  arrayUnion,
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { useSnapshot } from "../hooks/useSnapshot";
+import { useContact } from "../contexts/ContactContext";
 
 export function ChatBox() {
   const [user] = useAuthState(auth);
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
   const scrollRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  useEffect(() => {
-    const msgQuery = query(messagesRef, orderBy("createdAt", "asc"));
-
-    const unsubscribe = onSnapshot(msgQuery, (snapshot) => {
-      setMessages(snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    try {
-      const tempVariable = input;
-      setInput("");
-      await addDoc(messagesRef, {
-        userName: user.displayName,
-        userId: user.uid,
-        content: tempVariable,
-        profile: user.photoURL,
-        createdAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.log(err);
-    }
-  }
 
   return (
     <>
@@ -106,32 +86,72 @@ export function ChatBox() {
           ))}
         </div>
         <span ref={scrollRef}></span>
-        <div className="chat-footer">
-          <Flex gap="2" className="send-msg-container">
-            <TextField.Root
-              size="3"
-              className="send-msg-container__input"
-              placeholder="Search the docs…"
-            >
-              <TextField.Slot>
-                <IconButton size="1" variant="ghost">
-                  <AttachFileIcon fontSize="small" />
-                </IconButton>
-              </TextField.Slot>
-              <TextField.Slot>
-                <IconButton size="1" variant="ghost" radius="full">
-                  {" "}
-                  <SendIcon fontSize="small" />
-                </IconButton>
-              </TextField.Slot>
-            </TextField.Root>
-
-            <Button size="3" className="send-msg-container__btn">
-              Send
-            </Button>
-          </Flex>
-        </div>
+        <ChatFooter />
       </div>
     </>
   );
 }
+
+const ChatFooter = () => {
+  const [user] = useAuthState(auth);
+  const [input, setInput] = useState("");
+  const { contact } = useContact();
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    const temp = input;
+    setInput("");
+    console.log(contact);
+
+    try {
+      const chatId = `${user.uid}_${contact.uid}`;
+      const chatRef = doc(chatsRef, chatId);
+      const chatSnapshot = await getDoc(chatRef);
+
+      if (chatSnapshot.exists()) {
+        const messagesRef = collection(chatRef, "messages");
+        await addDoc(messagesRef, {
+          content: temp,
+          createdAt: serverTimestamp(),
+        });
+
+        console.log("message sent to this chatroom");
+      } else {
+        console.log("chatSnapshot does not exist");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="chat-footer">
+      <Flex gap="2" className="send-msg-container">
+        <form onSubmit={sendMessage}>
+          <TextField.Root
+            onInput={(e) => setInput(e.target.value)}
+            size="3"
+            className="send-msg-container__input"
+            placeholder="Search the docs…"
+          >
+            <TextField.Slot>
+              <IconButton size="1" variant="ghost">
+                <AttachFileIcon fontSize="small" />
+              </IconButton>
+            </TextField.Slot>
+            <TextField.Slot>
+              <IconButton size="1" variant="ghost" radius="full">
+                {" "}
+                <SendIcon fontSize="small" />
+              </IconButton>
+            </TextField.Slot>
+          </TextField.Root>
+
+          <Button size="3" className="send-msg-container__btn">
+            Send
+          </Button>
+        </form>
+      </Flex>
+    </div>
+  );
+};

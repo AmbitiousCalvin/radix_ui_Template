@@ -1,36 +1,39 @@
 import {
   Button,
-  Section,
   Flex,
   IconButton,
-  Heading,
-  TextField,
-  Container,
   Box,
   Text,
   Grid,
-  Card,
   Avatar,
   Theme,
-  Separator,
   Skeleton,
   Popover,
-  Inset,
 } from "@radix-ui/themes";
-import { useState, useRef, useEffect, memo } from "react";
-import useLocalstorage from "../hooks/useLocalstorage";
-import { useLayoutContext } from "../contexts/LayoutContext";
+import { useState, useEffect, memo } from "react";
 import "../styles/contactList.scss";
 import { useSnapshot } from "../hooks/useSnapshot";
-import { usersRef, auth } from "../firebase";
+import { usersRef, auth, db, chatsRef } from "../firebase";
 import PersonIcon from "@mui/icons-material/Person"; // View Profile Icon
 import ChatIcon from "@mui/icons-material/Chat"; // Start Chat Icon
 import NotificationsOffIcon from "@mui/icons-material/NotificationsOff"; // Mute Notifications Icon
 import BlockIcon from "@mui/icons-material/Block"; // Block User Icon
 import DeleteIcon from "@mui/icons-material/Delete"; // Delete Chat Icon
 import MoreVertIcon from "@mui/icons-material/MoreVert"; // Three-dots Menu Icon
-import SettingsIcon from "@mui/icons-material/Settings"; // Settings Icon
-
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  arrayUnion,
+  serverTimestamp,
+  getDoc,
+  setDoc,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+import { useContact } from "../contexts/ContactContext";
 import { useAuthState } from "react-firebase-hooks/auth";
 
 const dummyData = [{}, {}, {}, {}, {}];
@@ -45,12 +48,14 @@ export const ContactList = memo(() => {
     console.log("contacts log: ", contacts);
   }, [contacts]);
 
+  if (!user) return <h1>Loading...</h1>;
+
   return (
     <Theme accentColor="gray">
       <Box p="2" pl="0" className={"contact-list"}>
         <Grid gap="1">
           {contacts.map((contact) => {
-            // if (user.uid === contact.uid) return null;
+            if (user.uid === contact.uid) return null;
             return (
               <ContactListItem
                 key={contact.uid}
@@ -66,9 +71,15 @@ export const ContactList = memo(() => {
 });
 
 const ContactListItem = memo(({ contact = {}, isLoading }) => {
+  const { setContact } = useContact();
+
   return (
     <Skeleton loading={isLoading}>
-      <Button variant="soft" className="contact-list__item">
+      <Button
+        variant="soft"
+        className="contact-list__item"
+        onClick={() => setContact(contact)}
+      >
         <Avatar
           radius="full"
           size="2"
@@ -92,6 +103,45 @@ const ContactListItem = memo(({ contact = {}, isLoading }) => {
 });
 
 const MoreInfoIcon = ({ contact }) => {
+  const [user] = useAuthState(auth);
+  const { setContact } = useContact();
+
+  const startChat = async (contact) => {
+    try {
+      setContact(contact);
+      const chatId = `${user.uid}_${contact.uid}`;
+      const chatRef = doc(chatsRef, chatId);
+      const chatSnapshot = await getDoc(chatRef);
+
+      if (!chatSnapshot.exists()) {
+        await setDoc(chatRef, {
+          user1: {
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            email: user.email,
+          },
+          user2: {
+            displayName: contact.displayName,
+            photoURL: contact.photoURL,
+            email: contact.email,
+          },
+        });
+        const messagesRef = collection(chatRef, "messages");
+        await addDoc(messagesRef, {
+          sender: "System",
+          content: "Welcome to the chat!",
+          createdAt: serverTimestamp(),
+        });
+
+        console.log("chat added with custom ID:", chatId);
+      } else {
+        console.log("chat already exists");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <Popover.Root>
       <Popover.Trigger>
@@ -123,7 +173,7 @@ const MoreInfoIcon = ({ contact }) => {
             onClick={() => startChat(contact)}
           >
             <ChatIcon fontSize="small" />
-            Start Chat
+            Start Chat (Add Contact Fn)
           </Button>
 
           {/* Mute Notifications */}
@@ -131,7 +181,6 @@ const MoreInfoIcon = ({ contact }) => {
             className="contact-list__btn	"
             variant="soft"
             size="2"
-            className="contact-list__btn	"
             onClick={() => toggleMute(contact)}
           >
             <NotificationsOffIcon fontSize="small" />
