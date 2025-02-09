@@ -2,21 +2,43 @@
 
 .chat {
   width: 100%;
-  height: calc(100vh - 65px);
   position: relative;
 }
 
+.chat__messages {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: calc(100vh - 65px - 80px);
+  gap: 0.5rem;
+  margin-block: 2rem;
+}
+
+.chat__message {
+  display: flex;
+  width: fit-content;
+  &.right {
+    flex-direction: row-reverse;
+    margin-left: auto;
+  }
+
+  &.left {
+    margin-right: auto;
+  }
+}
+
 .chat-footer {
+  min-width: 80px;
   width: 100%;
-  position: absolute;
+  position: sticky;
   bottom: 0px;
   padding: 1rem;
   background-color: $gray-1;
   border-top: 1px solid $gray-4;
-}
 
-.send-msg-container {
-  &__input {
-    width: 100%;
+  .send-msg-container {
+    &__input {
+      width: 100%;
+    }
   }
 }

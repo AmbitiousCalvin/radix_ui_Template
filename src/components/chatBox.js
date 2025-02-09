@@ -43,9 +43,41 @@ import { useSnapshot } from "../hooks/useSnapshot";
 import { useContact } from "../contexts/ContactContext";
 
 export function ChatBox() {
+  return (
+    <>
+      <div className="chat">
+        <ChatMessagesContainer />
+        <ChatFooter />
+      </div>
+    </>
+  );
+}
+
+const ChatMessagesContainer = memo(() => {
   const [user] = useAuthState(auth);
   const [messages, setMessages] = useState([]);
   const scrollRef = useRef(null);
+  const { contact } = useContact();
+
+  useEffect(() => {
+    if (!contact) return;
+    const chatId = `${user.uid}_${contact.uid}`;
+    const chatRef = doc(chatsRef, chatId);
+    const messagesRef = collection(chatRef, "messages");
+    const messagesQuery = query(messagesRef, orderBy("createdAt", "asc"));
+
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const users = snapshot.docs.map((doc) => {
+        console.log("Doc data:", doc.data());
+
+        return { ...doc.data(), id: doc.id };
+      });
+
+      setMessages(users);
+    });
+
+    return () => unsubscribe();
+  }, [contact]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,49 +85,55 @@ export function ChatBox() {
 
   return (
     <>
-      <div className="chat">
-        <div className="chat__messages">
-          {messages.map((item) => (
-            <div
-              key={item.id}
-              className={`chat__message ${
-                item.userId === user.uid ? "right" : "left"
-              }`}
-            >
-              <div
-                className="chat__message-profile-container"
-                style={{ "--user-name": `'${user.displayName.slice(0, 1)}'` }}
-              >
-                <img
-                  className="profile"
-                  src={item.profile}
-                  width={20}
-                  height={20}
-                  alt="Profile"
-                />
-              </div>
-              <div
-                className={`chat__message-content-container ${
-                  item.userId === user.uid ? "right" : "left"
-                }`}
-              >
-                <span className="chat__message-user">{item.userName}</span>
-                <p className="chat__message-content">{item.content}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <span ref={scrollRef}></span>
-        <ChatFooter />
+      <div className="chat__messages">
+        {messages.map((item) => (
+          <MessageItem item={item} user={user} contact={contact} />
+        ))}
       </div>
+      <span ref={scrollRef}></span>
     </>
   );
-}
+});
 
-const ChatFooter = () => {
+const MessageItem = memo(({ item, user, contact }) => {
+  const className = `${
+    item.senderId === user.uid ? "chat__message right" : "chat__message left"
+  }`;
+
+  return (
+    <Card className={className}>
+      <Flex gap="2" align="center">
+        <Avatar
+          size="2"
+          src={item.senderId === user.uid ? user.photoURL : contact.photoURL}
+          radius="full"
+          fallback={
+            item.senderId === user.uid
+              ? user.displayName.charAt(0)
+              : contact.displayName.charAt(0)
+          }
+        />
+        <Box>
+          <Text as="div" size="2" weight="bold">
+            {item.senderId === user.uid
+              ? user.displayName
+              : contact.displayName}
+          </Text>
+          <Text as="div" size="2" color="gray">
+            {item.content}
+          </Text>
+        </Box>
+      </Flex>
+    </Card>
+  );
+});
+
+const ChatFooter = memo(() => {
   const [user] = useAuthState(auth);
   const [input, setInput] = useState("");
   const { contact } = useContact();
+
+  if (!contact) return <h1>Loading...</h1>;
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -111,6 +149,7 @@ const ChatFooter = () => {
       if (chatSnapshot.exists()) {
         const messagesRef = collection(chatRef, "messages");
         await addDoc(messagesRef, {
+          senderId: user.uid,
           content: temp,
           createdAt: serverTimestamp(),
         });
@@ -126,9 +165,10 @@ const ChatFooter = () => {
 
   return (
     <div className="chat-footer">
-      <Flex gap="2" className="send-msg-container">
-        <form onSubmit={sendMessage}>
+      <form style={{ width: "100%" }} onSubmit={sendMessage}>
+        <Flex gap="2" className="send-msg-container">
           <TextField.Root
+            value={input}
             onInput={(e) => setInput(e.target.value)}
             size="3"
             className="send-msg-container__input"
@@ -150,8 +190,8 @@ const ChatFooter = () => {
           <Button size="3" className="send-msg-container__btn">
             Send
           </Button>
-        </form>
-      </Flex>
+        </Flex>
+      </form>
     </div>
   );
-};
+});

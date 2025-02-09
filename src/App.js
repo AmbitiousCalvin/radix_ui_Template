@@ -25,6 +25,7 @@ export default function App() {
           <Sidebar></Sidebar>
           <ContactList></ContactList>
           <ChatBox />
+          <div className="border-red" style={{ minWidth: "250px" }}></div>
         </Section>
 
         <div className="overlay"></div>
