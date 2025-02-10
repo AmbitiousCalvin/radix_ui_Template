@@ -17,169 +17,168 @@ import {
   Skeleton,
 } from "@radix-ui/themes";
 import { useState, useEffect, memo, useRef } from "react";
-import { auth, messagesRef, logOut, usersRef } from "../firebase";
+import { auth, logOut, usersRef, db, chatsRef } from "../firebase";
 import SendIcon from "@mui/icons-material/Send";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { useLayoutContext } from "../contexts/LayoutContext";
 
 import {
+  getDoc,
   where,
   query,
+  collection,
   orderBy,
   limit,
   onSnapshot,
   addDoc,
   serverTimestamp,
   doc,
+  setDoc,
   getDocs,
   updateDoc,
   arrayUnion,
 } from "firebase/firestore";
-import { db } from "../firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { useSnapshot } from "../hooks/useSnapshot";
+import { useContact } from "../contexts/ContactContext";
 
 export function ChatBox() {
-  const [user] = useAuthState(auth);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const scrollRef = useRef(null);
-
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    const msgQuery = query(messagesRef, orderBy("createdAt", "asc"));
-
-    const unsubscribe = onSnapshot(msgQuery, (snapshot) => {
-      setMessages(snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    try {
-      const tempVariable = input;
-      setInput("");
-      await addDoc(messagesRef, {
-        userName: user.displayName,
-        userId: user.uid,
-        content: tempVariable,
-        profile: user.photoURL,
-        createdAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
   return (
     <>
       <div className="chat">
-        <div className="chat__messages">
-          {messages.map((item) => (
-            <div
-              key={item.id}
-              className={`chat__message ${
-                item.userId === user.uid ? "right" : "left"
-              }`}
-            >
-              <div
-                className="chat__message-profile-container"
-                style={{ "--user-name": `'${user.displayName.slice(0, 1)}'` }}
-              >
-                <img
-                  className="profile"
-                  src={item.profile}
-                  width={20}
-                  height={20}
-                  alt="Profile"
-                />
-              </div>
-              <div
-                className={`chat__message-content-container ${
-                  item.userId === user.uid ? "right" : "left"
-                }`}
-              >
-                <span className="chat__message-user">{item.userName}</span>
-                <p className="chat__message-content">{item.content}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <span ref={scrollRef}></span>
+        <ChatMessagesContainer />
         <ChatFooter />
       </div>
     </>
   );
 }
 
-const ChatFooter = () => {
+const ChatMessagesContainer = memo(() => {
+  const [user] = useAuthState(auth);
+  const [messages, setMessages] = useState([]);
+  const scrollRef = useRef(null);
+  const { contact } = useContact();
+
+  useEffect(() => {
+    if (!contact) return;
+    const generateChatId = (user1, user2) => {
+      return [String(user1).toLowerCase(), String(user2).toLowerCase()]
+        .sort((a, b) => a.localeCompare(b)) // Ensures proper sorting
+        .join("_");
+    };
+    const chatId = generateChatId(user.uid, contact.uid);
+    const chatRef = doc(chatsRef, chatId);
+    const messagesRef = collection(chatRef, "messages");
+    const messagesQuery = query(messagesRef, orderBy("createdAt", "asc"));
+
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const users = snapshot.docs.map((doc) => {
+        console.log("Doc data:", doc.data());
+
+        return { ...doc.data(), id: doc.id };
+      });
+
+      setMessages(users);
+    });
+
+    return () => unsubscribe();
+  }, [contact]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  return (
+    <>
+      <div className="chat__messages">
+        {messages.map((item) => (
+          <MessageItem item={item} user={user} contact={contact} />
+        ))}
+      </div>
+      <span ref={scrollRef}></span>
+    </>
+  );
+});
+
+const MessageItem = memo(({ item, user, contact }) => {
+  const className = `${
+    item.senderId === user.uid ? "chat__message right" : "chat__message left"
+  }`;
+
+  return (
+    <Card className={className}>
+      <Flex gap="2" align="center">
+        <Avatar
+          size="2"
+          src={item.senderId === user.uid ? user.photoURL : contact.photoURL}
+          radius="full"
+          fallback={
+            item.senderId === user.uid
+              ? user.displayName.charAt(0)
+              : contact.displayName.charAt(0)
+          }
+        />
+        <Box>
+          <Text as="div" size="2" weight="bold">
+            {item.senderId === user.uid
+              ? user.displayName
+              : contact.displayName}
+          </Text>
+          <Text as="div" size="2" color="gray">
+            {item.content}
+          </Text>
+        </Box>
+      </Flex>
+    </Card>
+  );
+});
+
+const ChatFooter = memo(() => {
   const [user] = useAuthState(auth);
   const [input, setInput] = useState("");
-  const { chatId, otherUserDocId, otherUserChatId } = useLayoutContext();
+  const { contact } = useContact();
 
-  const getUserDocId = async (user) => {
-    const userQuery = query(usersRef, where("uid", "==", user.uid));
-
-    try {
-      const querySnapshot = await getDocs(userQuery);
-      if (querySnapshot.empty) return console.error("User document not found!");
-
-      const userDoc = querySnapshot.docs[0]; // Get the first matching document
-      return userDoc.id; // Return the document ID
-    } catch (error) {
-      console.error("Error fetching user document:", error);
-    }
-  };
+  if (!contact) return <h1>Loading...</h1>;
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    const userDocId = await getUserDocId(user);
-    if (!userDocId) return;
-    if (!chatId) return console.error("chatId is undefined");
-
-    const userRef = doc(db, "users", userDocId, "contacts", chatId);
-    const OtherUserRef = doc(
-      db,
-      "users",
-      otherUserDocId,
-      "contacts",
-      otherUserChatId
-    );
-
-    const messageText = input;
+    const temp = input;
     setInput("");
-
-    const newMessage = {
-      sender: user.uid,
-      text: messageText,
-      timestamp: new Date(),
-    };
+    console.log(contact);
 
     try {
-      await updateDoc(userRef, {
-        messages: arrayUnion(newMessage),
-      });
-      await updateDoc(OtherUserRef, {
-        messages: arrayUnion(newMessage),
-      });
-      console.log("Message sent!");
-    } catch (error) {
-      console.error("Error sending message:", error);
+      const generateChatId = (user1, user2) => {
+        return [String(user1).toLowerCase(), String(user2).toLowerCase()]
+          .sort((a, b) => a.localeCompare(b)) // Ensures proper sorting
+          .join("_");
+      };
+      const chatId = generateChatId(user.uid, contact.uid);
+      const chatRef = doc(chatsRef, chatId);
+      const chatSnapshot = await getDoc(chatRef);
+
+      if (chatSnapshot.exists()) {
+        const messagesRef = collection(chatRef, "messages");
+        await addDoc(messagesRef, {
+          senderId: user.uid,
+          content: temp,
+          createdAt: serverTimestamp(),
+        });
+
+        console.log("message sent to this chatroom");
+      } else {
+        console.log("chatSnapshot does not exist");
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
   return (
     <div className="chat-footer">
-      <Flex gap="2" className="send-msg-container">
-        <form onSubmit={sendMessage}>
+      <form style={{ width: "100%" }} onSubmit={sendMessage}>
+        <Flex gap="2" className="send-msg-container">
           <TextField.Root
+            value={input}
             onInput={(e) => setInput(e.target.value)}
             size="3"
             className="send-msg-container__input"
@@ -201,8 +200,8 @@ const ChatFooter = () => {
           <Button size="3" className="send-msg-container__btn">
             Send
           </Button>
-        </form>
-      </Flex>
+        </Flex>
+      </form>
     </div>
   );
-};
+});

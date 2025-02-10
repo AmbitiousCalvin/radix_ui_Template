@@ -1,36 +1,39 @@
 import {
   Button,
-  Section,
   Flex,
   IconButton,
-  Heading,
-  TextField,
-  Container,
   Box,
   Text,
   Grid,
-  Card,
   Avatar,
   Theme,
-  Separator,
   Skeleton,
   Popover,
-  Inset,
 } from "@radix-ui/themes";
-import { useState, useRef, useEffect, memo } from "react";
-import useLocalstorage from "../hooks/useLocalstorage";
+import { useState, useEffect, memo } from "react";
 import "../styles/contactList.scss";
 import { useSnapshot } from "../hooks/useSnapshot";
-import { usersRef, auth, db } from "../firebase";
+import { usersRef, auth, db, chatsRef } from "../firebase";
 import PersonIcon from "@mui/icons-material/Person"; // View Profile Icon
 import ChatIcon from "@mui/icons-material/Chat"; // Start Chat Icon
 import NotificationsOffIcon from "@mui/icons-material/NotificationsOff"; // Mute Notifications Icon
 import BlockIcon from "@mui/icons-material/Block"; // Block User Icon
 import DeleteIcon from "@mui/icons-material/Delete"; // Delete Chat Icon
 import MoreVertIcon from "@mui/icons-material/MoreVert"; // Three-dots Menu Icon
-import SettingsIcon from "@mui/icons-material/Settings"; // Settings Icon
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
-import { useLayoutContext } from "../contexts/LayoutContext";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  arrayUnion,
+  serverTimestamp,
+  getDoc,
+  setDoc,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+import { useContact } from "../contexts/ContactContext";
 import { useAuthState } from "react-firebase-hooks/auth";
 
 const dummyData = [{}, {}, {}, {}, {}];
@@ -68,9 +71,15 @@ export const ContactList = memo(() => {
 });
 
 const ContactListItem = memo(({ contact = {}, isLoading }) => {
+  const { setContact } = useContact();
+
   return (
     <Skeleton loading={isLoading}>
-      <Button variant="soft" className="contact-list__item">
+      <Button
+        variant="soft"
+        className="contact-list__item"
+        onClick={() => setContact(contact)}
+      >
         <Avatar
           radius="full"
           size="2"
@@ -95,75 +104,46 @@ const ContactListItem = memo(({ contact = {}, isLoading }) => {
 
 const MoreInfoIcon = ({ contact }) => {
   const [user] = useAuthState(auth);
-  const { setChatId, setOtherUserDocId, setOtherUserChatId } =
-    useLayoutContext();
-
-  const getUserDocId = async (user) => {
-    // Query the "users" collection to find the document where "uid" matches
-    const userQuery = query(usersRef, where("uid", "==", user.uid));
-
-    try {
-      const querySnapshot = await getDocs(userQuery);
-      if (querySnapshot.empty) return console.error("User document not found!");
-
-      const userDoc = querySnapshot.docs[0]; // Get the first matching document
-      return userDoc.id; // Return the document ID
-    } catch (error) {
-      console.error("Error fetching user document:", error);
-    }
-  };
+  const { setContact } = useContact();
 
   const startChat = async (contact) => {
-    const userDocId = await getUserDocId(user); // Get the document ID of the user
-    if (!userDocId) return;
-    const contactsRef = collection(db, "users", userDocId, "contacts");
-    const contactQuery = query(contactsRef, where("uid", "==", contact.uid));
-
-    const otherUserDocId = await getUserDocId(contact);
-    setOtherUserDocId(otherUserDocId);
-    const otherUserContactsRef = collection(
-      db,
-      "users",
-      otherUserDocId,
-      "contacts"
-    );
-    const otherUserContactQuery = query(
-      otherUserContactsRef,
-      where("uid", "==", user.uid)
-    );
-
     try {
-      const querySnapshot = await getDocs(contactQuery);
-      const OtherUserQuerySnapshot = await getDocs(otherUserContactQuery);
-      if (querySnapshot.empty && OtherUserQuerySnapshot.empty) {
-        const docRef = await addDoc(contactsRef, {
-          displayName: contact.displayName,
-          photoURL: contact.photoURL,
-          email: contact.email,
-          uid: contact.uid,
-          messages: [],
-        });
-        setChatId(docRef.id);
-        console.log("Current User Contact added with ID:", docRef.id);
+      setContact(contact);
+      const generateChatId = (user1, user2) => {
+        return [String(user1).toLowerCase(), String(user2).toLowerCase()]
+          .sort((a, b) => a.localeCompare(b)) // Ensures proper sorting
+          .join("_");
+      };
+      const chatId = generateChatId(user.uid, contact.uid);
+      const chatRef = doc(chatsRef, chatId);
+      const chatSnapshot = await getDoc(chatRef);
 
-        const otherUserDocRef = await addDoc(otherUserContactsRef, {
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          email: user.email,
-          uid: user.uid,
-          messages: [],
+      if (!chatSnapshot.exists()) {
+        await setDoc(chatRef, {
+          user1: {
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            email: user.email,
+          },
+          user2: {
+            displayName: contact.displayName,
+            photoURL: contact.photoURL,
+            email: contact.email,
+          },
         });
-        setOtherUserChatId(otherUserDocRef.id);
+        const messagesRef = collection(chatRef, "messages");
+        await addDoc(messagesRef, {
+          sender: "System",
+          content: "Welcome to the chat!",
+          createdAt: serverTimestamp(),
+        });
 
-        console.log(
-          "Contact added to the other user's contacts WITH ID",
-          otherUserDocRef.id
-        );
+        console.log("chat added with custom ID:", chatId);
       } else {
-        console.log("Contact already exists:", contact.uid);
+        console.log("chat already exists");
       }
-    } catch (error) {
-      console.error("Error adding contact:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
